@@ -158,7 +158,6 @@ public:
         }
         std::cout.flush();
         // apply algo
-        /*
        first_come_first_served_FCFS(process_info);
          std::cout << "-----------------------------------" << '\n' << std::flush;
 
@@ -170,7 +169,7 @@ public:
             p.content();
         }
         shortest_job_first_SJF(process_info);
-         */
+       
 
         // at ready queue to Duling
         std::cout << "[Ready queue] - Duling " << '\n' << std::flush;
