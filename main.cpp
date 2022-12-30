@@ -95,6 +95,38 @@ struct WaitQueue{
 };
 
 
+struct WaitQueueRR{
+    // a simple FIFO
+    std::vector<ProcessInfo> wait_process_queue;
+
+    void to_sleep(ProcessInfo p)
+    {
+        wait_process_queue.push_back(p);
+    }
+
+    void to_sleep_before(ProcessInfo p)
+    {
+        std::reverse(wait_process_queue.begin(), wait_process_queue.end());
+        wait_process_queue.push_back(p);
+    }
+
+    ProcessInfo exit()
+    {
+        std::reverse(wait_process_queue.begin(), wait_process_queue.end());
+        ProcessInfo x = wait_process_queue.at(wait_process_queue.size() - 1);
+        running_for(x.duration, x.process_id_);
+        wait_process_queue.pop_back();
+        return x;
+
+    }
+
+    int length()
+    {
+        return wait_process_queue.size();
+    }
+};
+
+
 class Sheduler{
 
 public:
@@ -150,35 +182,45 @@ public:
             process_info.push_back(pi);
         }
 
+        std::vector<ProcessInfo> store = process_info;
 
-        // at ready queue
-        std::cout << "[Ready queue] - FCFS " << '\n' << std::flush;
-        for(ProcessInfo p : process_info){
+      // at ready queue
+      std::cout << "[Ready queue] - FCFS " << '\n' << std::flush;
+      for(ProcessInfo p : process_info){
+          p.content();
+      }
+      std::cout.flush();
+      // apply algo
+
+     first_come_first_served_FCFS(process_info);
+       std::cout << "-----------------------------------" << '\n' << std::flush;
+
+      // at ready queue to SJF
+      std::cout << "[Ready queue] - SJF " << '\n' << std::flush;
+      // order by duration
+      process_info = selection_sort_order_by_duration(process_info);
+      for(ProcessInfo p : process_info){
+          p.content();
+      }
+      shortest_job_first_SJF(process_info);
+
+      std::cout << "-----------------------------------" << '\n' << std::flush;
+      // at ready queue to Duling
+      std::cout << "[Ready queue] - Duling " << '\n' << std::flush;
+      // order by priority
+      process_info = selection_sort_order_by_priority(process_info);
+      for(ProcessInfo p : process_info){
+          p.content();
+      }
+      duling(process_info);
+
+        std::cout << "-----------------------------------" << '\n' << std::flush;
+        // at ready queue RR
+        std::cout << "[Ready queue] - RR " << '\n' << std::flush;
+        for(ProcessInfo p : store){
             p.content();
         }
-        std::cout.flush();
-        // apply algo
-       first_come_first_served_FCFS(process_info);
-         std::cout << "-----------------------------------" << '\n' << std::flush;
-
-        // at ready queue to SJF
-        std::cout << "[Ready queue] - SJF " << '\n' << std::flush;
-        // order by duration
-        process_info = selection_sort_order_by_duration(process_info);
-        for(ProcessInfo p : process_info){
-            p.content();
-        }
-        shortest_job_first_SJF(process_info);
-       
-
-        // at ready queue to Duling
-        std::cout << "[Ready queue] - Duling " << '\n' << std::flush;
-        // order by priority
-        process_info = selection_sort_order_by_priority(process_info);
-        for(ProcessInfo p : process_info){
-            p.content();
-        }
-        duling(process_info);
+        _round_robin_RR(store);
     }
 
     // sheduler algorithms
@@ -203,9 +245,11 @@ public:
         std::cout << '\n' << std::flush;
     }
 
-    void round_robin_RR()
+    void round_robin_RR(std::vector<ProcessInfo> process_info)
     {
-
+        std::cout << '\n' << "[RR]" << '\n' << std::flush;
+        _shortest_job_first_SJF(process_info);
+        std::cout << '\n' << std::flush;
     }
 
 private:
@@ -217,6 +261,7 @@ private:
 
 
     WaitQueue wq;
+    WaitQueueRR wqRR;
 
     void _first_come_first_served_FCFS(std::vector<ProcessInfo> process_s)
     {
@@ -296,9 +341,38 @@ private:
         }
     }
 
-    void _round_robin_RR()
+    void _round_robin_RR(std::vector<ProcessInfo> process_s)
     {
+        for(ProcessInfo proc: process_s){
+            if(proc.preemptive){
+                proc.duration = proc.duration - proc.time_to_stop;
+                if(proc.duration > 0){
+                    wqRR.to_sleep(proc);
+                }
+                std::cout << "running [Interruption] ... Process: " << proc.process_id_ << ", duration: " << 1 << '\n' << std::flush;
+                running_for(1, proc.process_id_); // by default, MY sheduler allow 1 sec, per execution
+            }else{
+                if(proc.duration > 0){
+                    wqRR.to_sleep(proc);
+                }
+            }
+        }
 
+        // second loop, wait queue
+        if(wqRR.length() > 0){
+            std::cout << '\n' << "From [Wait Queue]" << '\n' << std::flush;
+            while(wqRR.length() > 0){
+                ProcessInfo proc = wqRR.exit();
+                if(proc.duration > 0){
+                    proc.duration = proc.duration - 1;
+                    std::cout << "running ... Process: " << proc.process_id_ << ", duration: " << 1 << '\n' << std::flush;
+                    wqRR.to_sleep_before(proc);
+                    running_for(1, proc.process_id_); // by default, MY sheduler allow 1 sec, per execution
+                }
+
+
+            }
+        }
     }
 
 };
