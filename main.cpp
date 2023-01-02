@@ -16,7 +16,7 @@ void running_for(float time, int id){
     #ifdef WINDOWS_SYSTEM
         Sleep(t * 1000);
     #else
-        usleep(t);
+        usleep(t * 1000);
     #endif
 }
 
